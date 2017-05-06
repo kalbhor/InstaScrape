@@ -8,29 +8,35 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 import urllib.request
+from progress.bar import Bar, FillingSquaresBar
 
 
 def simulate_page(user, count):
-    
-    page_url = "https://instagram.com/{user}".format(user=user)
 
+    page_url = "https://instagram.com/{user}".format(user=user)
+    loop_count = 1 + (count - 24)/12
+
+    loading_bar = Bar('Scraping', max=int(loop_count+1), suffix='%(percent)d%%')
+
+    print("Requesting page..\n")
     driver = webdriver.PhantomJS()
     driver.get(page_url)
-
+    
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     driver.find_element_by_css_selector('._8imhp._glz1g').click()
 
-    if count > 24:
-        loop_count = 1 + (count - 24)/12
-        i = 0
 
+    if count > 24:
+        i = 0
         while i <= loop_count:
             if wait_for_visibility(driver, 23 + i*12):
                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                 sleep(0.05)
-                i = i + 1
+                i += 1
+                loading_bar.next()
             else:
                 pass
+        loading_bar.finish()
 
 
     source = driver.page_source
@@ -49,8 +55,6 @@ def get_img_urls(source, count):
     for i in soup.find_all('img', {'class' : '_icyx7'}):
     	img_urls.append(i.get('src'))
 
-    print(len(img_urls))
-
     return img_urls[:count]
 
         
@@ -58,9 +62,13 @@ def download_imgs(img_list, user):
 
     if path.exists(user) == False:
         mkdir(user)
+
+    loading_bar = Bar('Downloading Images', max=len(img_list), suffix='%(index)d/%(max)d')
 	
     for i,val in enumerate(img_list):
         urllib.request.urlretrieve(val, "{}/{}.jpg".format(user, i))
+        loading_bar.next()
+    loading_bar.finish()
 
 def wait_for_visibility(driver, num):
 
@@ -78,6 +86,5 @@ if __name__ == '__main__':
     count = int(argv[2])
     source = simulate_page(user, count)
     imgs = get_img_urls(source, count)
-    print(len(imgs))
     download_imgs(imgs, user)
     
