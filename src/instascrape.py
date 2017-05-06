@@ -14,17 +14,17 @@ def simulate_page(user, count):
     
     page_url = "https://instagram.com/{user}".format(user=user)
 
-    driver = webdriver.Chrome()
+    driver = webdriver.PhantomJS()
     driver.get(page_url)
 
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     driver.find_element_by_css_selector('._8imhp._glz1g').click()
 
     if count > 24:
-        loop_count = (count - 24)/12
+        loop_count = 1 + (count - 24)/12
         i = 0
 
-        while i < loop_count:
+        while i <= loop_count:
             if wait_for_visibility(driver, 23 + i*12):
                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                 sleep(0.05)
