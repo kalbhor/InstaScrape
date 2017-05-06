@@ -1,4 +1,6 @@
 from os import mkdir, path
+from sys import argv
+from time import sleep
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -7,38 +9,37 @@ from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 import urllib.request
 
-from time import sleep
-def simulate_page(user):
+
+def simulate_page(user, count):
     
     page_url = "https://instagram.com/{user}".format(user=user)
 
     driver = webdriver.Chrome()
     driver.get(page_url)
-    #delay = 5
-
-    #try:
-    #    element = WebDriverWait(driver, delay).until(
-    #    EC.presence_of_element_located((By.XPATH, '//*[@class="_i572c notranslate"]')))
-    #except TimeoutException:
-    #    print("Timeout")
-    #    exit()
 
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     driver.find_element_by_css_selector('._8imhp._glz1g').click()
 
-    for i in range(21):
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        sleep(2)
+    if count > 24:
+        loop_count = (count - 24)/12
+        i = 0
+
+        while i < loop_count:
+            if wait_for_visibility(driver, 23 + i*12):
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                sleep(0.05)
+                i = i + 1
+            else:
+                pass
 
 
-    sleep(2)
     source = driver.page_source
     driver.close()
 
     return source
 
 
-def get_img_urls(source):
+def get_img_urls(source, count):
 
     img_urls = []
 
@@ -48,7 +49,9 @@ def get_img_urls(source):
     for i in soup.find_all('img', {'class' : '_icyx7'}):
     	img_urls.append(i.get('src'))
 
-    return img_urls
+    print(len(img_urls))
+
+    return img_urls[:count]
 
         
 def download_imgs(img_list, user):
@@ -59,11 +62,22 @@ def download_imgs(img_list, user):
     for i,val in enumerate(img_list):
         urllib.request.urlretrieve(val, "{}/{}.jpg".format(user, i))
 
+def wait_for_visibility(driver, num):
+
+    try:
+        element = driver.find_element_by_id('pImage_{}'.format(num))
+        if element.is_displayed():
+            return True
+    except Exception as e:
+        return False
+
         
 if __name__ == '__main__':
-    user = input('>')
-    source = simulate_page(user)
-    imgs = get_img_urls(source)
+    
+    user = argv[1]
+    count = int(argv[2])
+    source = simulate_page(user, count)
+    imgs = get_img_urls(source, count)
     print(len(imgs))
     download_imgs(imgs, user)
     
